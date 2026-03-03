@@ -1,0 +1,101 @@
+# =============================================================================
+# OpenTelemetry Collector Configuration
+# =============================================================================
+# Receives OTLP (traces, metrics, logs) from instrumented services.
+# Fans out to: Prometheus (metrics), Tempo (traces), Loki (logs).
+# Opik pipeline is activated when docker-compose.opik.yml is included.
+# =============================================================================
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "http://*"
+            - "https://*"
+
+  # Scrape the collector's own metrics
+  prometheus/self:
+    config:
+      scrape_configs:
+        - job_name: otel-collector
+          scrape_interval: 15s
+          static_configs:
+            - targets: ["localhost:8888"]
+
+processors:
+  # Batch spans/metrics/logs before export — reduces network overhead
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Prevent OOM if a downstream is slow
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # Add resource attributes to all telemetry
+  resource:
+    attributes:
+      - key: collector.version
+        value: "contrib-latest"
+        action: insert
+
+exporters:
+  # ── Metrics → Prometheus ──────────────────────────────────────────────────
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: otel
+    send_timestamps: true
+    metric_expiration: 3m
+    enable_open_metrics: true
+    resource_to_telemetry_conversion:
+      enabled: true   # promotes resource attrs to metric labels
+
+  # ── Traces → Tempo ────────────────────────────────────────────────────────
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # ── Logs → Loki ───────────────────────────────────────────────────────────
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    default_labels_enabled:
+      exporter: false
+      job: true
+    headers:
+      Content-Type: application/json
+
+  # ── Debug (stdout) — useful for troubleshooting ───────────────────────────
+  debug:
+    verbosity: basic   # change to "detailed" to see full span data
+
+service:
+  telemetry:
+    logs:
+      level: warn
+    metrics:
+      address: 0.0.0.0:8888
+
+  pipelines:
+    traces:
+      receivers:  [otlp]
+      processors: [memory_limiter, batch]
+      exporters:  [otlp/tempo, debug]
+
+    metrics:
+      receivers:  [otlp, prometheus/self]
+      processors: [memory_limiter, batch]
+      exporters:  [prometheus]
+
+    logs:
+      receivers:  [otlp]
+      processors: [memory_limiter, batch]
+      exporters:  [loki, debug]

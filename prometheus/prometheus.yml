@@ -1,0 +1,34 @@
+# =============================================================================
+# Prometheus Configuration
+# =============================================================================
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: local
+    environment: dev
+
+scrape_configs:
+  # Scrape metrics exported by the OTEL Collector
+  - job_name: otel-collector
+    static_configs:
+      - targets: ["otel-collector:8889"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  # Scrape the collector's own internal metrics
+  - job_name: otel-collector-internal
+    static_configs:
+      - targets: ["otel-collector:8888"]
+
+  # Scrape Prometheus itself
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # ── Add your services here ────────────────────────────────────────────────
+  # Example: scrape a service that exposes /metrics directly
+  # - job_name: my-service
+  #   static_configs:
+  #     - targets: ["my-service:8080"]

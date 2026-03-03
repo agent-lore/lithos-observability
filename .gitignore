@@ -1,0 +1,15 @@
+# Environment — contains secrets
+.env
+
+# Docker volume data (if bind-mounted locally)
+data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

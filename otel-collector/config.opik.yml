@@ -1,0 +1,97 @@
+# =============================================================================
+# OTEL Collector Config — with Opik LLM trace forwarding
+# Used when docker-compose.opik.yml is included.
+# Identical to config.yml but adds otlp/opik to the traces pipeline.
+# =============================================================================
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "http://*"
+            - "https://*"
+
+  prometheus/self:
+    config:
+      scrape_configs:
+        - job_name: otel-collector
+          scrape_interval: 15s
+          static_configs:
+            - targets: ["localhost:8888"]
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  resource:
+    attributes:
+      - key: collector.version
+        value: "contrib-latest"
+        action: insert
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: otel
+    send_timestamps: true
+    metric_expiration: 3m
+    enable_open_metrics: true
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # ── Opik — receives all traces, surfaces LLM spans in its UI ──────────────
+  otlp/opik:
+    endpoint: opik-backend:7337
+    tls:
+      insecure: true
+
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    default_labels_enabled:
+      exporter: false
+      job: true
+    headers:
+      Content-Type: application/json
+
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    logs:
+      level: warn
+    metrics:
+      address: 0.0.0.0:8888
+
+  pipelines:
+    traces:
+      receivers:  [otlp]
+      processors: [memory_limiter, batch]
+      exporters:  [otlp/tempo, otlp/opik, debug]   # <-- Opik added here
+
+    metrics:
+      receivers:  [otlp, prometheus/self]
+      processors: [memory_limiter, batch]
+      exporters:  [prometheus]
+
+    logs:
+      receivers:  [otlp]
+      processors: [memory_limiter, batch]
+      exporters:  [loki, debug]

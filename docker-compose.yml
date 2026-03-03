@@ -1,0 +1,134 @@
+# =============================================================================
+# Local OTEL Observability Stack — Core
+# =============================================================================
+# Services: OTEL Collector · Prometheus · Grafana · Loki · Tempo
+#
+# Quick start:
+#   docker compose up -d
+#
+# With Opik LLM observability:
+#   docker compose -f docker-compose.yml -f docker-compose.opik.yml up -d
+#
+# Ports:
+#   Grafana       http://localhost:3000  (admin / see .env)
+#   OTEL HTTP     http://localhost:4318  (OTLP/HTTP — point your services here)
+#   OTEL gRPC     localhost:4317         (OTLP/gRPC)
+#   Prometheus    http://localhost:9090
+#   Tempo         http://localhost:3200
+#   Loki          http://localhost:3100
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # OpenTelemetry Collector — central telemetry hub
+  # Receives OTLP from all instrumented services, fans out to backends.
+  # Point your services at: OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+  # ---------------------------------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel/config.yml"]
+    volumes:
+      - ./otel-collector/config.yml:/etc/otel/config.yml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Collector self-metrics (Prometheus format)
+      - "8889:8889"   # Prometheus exporter endpoint (scraped by Prometheus)
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+    networks:
+      - otel
+
+  # ---------------------------------------------------------------------------
+  # Prometheus — metrics storage & alerting
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+      - --web.enable-lifecycle
+      - --web.enable-remote-write-receiver
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - otel
+
+  # ---------------------------------------------------------------------------
+  # Grafana Tempo — distributed trace storage
+  # ---------------------------------------------------------------------------
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo-config.yml"]
+    volumes:
+      - ./tempo/tempo-config.yml:/etc/tempo/tempo-config.yml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP API (queried by Grafana)
+    networks:
+      - otel
+
+  # ---------------------------------------------------------------------------
+  # Grafana Loki — log aggregation
+  # ---------------------------------------------------------------------------
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - otel
+
+  # ---------------------------------------------------------------------------
+  # Grafana — unified dashboards (metrics + traces + logs in one UI)
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor traceToMetrics
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+    networks:
+      - otel
+
+volumes:
+  prometheus_data:
+  tempo_data:
+  loki_data:
+  grafana_data:
+
+networks:
+  otel:
+    name: otel-network

@@ -1,0 +1,156 @@
+# =============================================================================
+# Opik (Comet) — LLM Observability — Self-Hosted
+# =============================================================================
+# Extends the core stack with Opik for LLM-specific trace analysis:
+#   - Prompt / completion viewer
+#   - Token usage & cost tracking
+#   - LLM evaluation scores
+#   - Multi-agent trace correlation
+#
+# Usage (always combine with core stack):
+#   docker compose -f docker-compose.yml -f docker-compose.opik.yml up -d
+#
+# Ports:
+#   Opik UI       http://localhost:5173
+#   Opik API      http://localhost:8080
+#
+# The OTEL Collector is automatically reconfigured (via this override) to
+# forward all traces to Opik as well as Tempo, so LLM spans appear in both
+# Grafana (full service picture) and Opik (LLM-specific analysis).
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Opik Backend
+  # ---------------------------------------------------------------------------
+  opik-backend:
+    image: ghcr.io/comet-ml/opik/opik-backend:latest
+    container_name: opik-backend
+    restart: unless-stopped
+    environment:
+      - OPIK_USAGE_REPORT_ENABLED=false
+      - MYSQL_HOST=opik-mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DB_NAME=opik
+      - MYSQL_USER=opik
+      - MYSQL_PASSWORD=${OPIK_MYSQL_PASSWORD:-opik_secret}
+      - CLICKHOUSE_HOST=opik-clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_DB=opik
+      - CLICKHOUSE_USER=opik
+      - CLICKHOUSE_PASSWORD=${OPIK_CLICKHOUSE_PASSWORD:-opik_secret}
+      - REDIS_URL=redis://opik-redis:6379
+      - JAVA_OPTS=-Xmx512m
+    ports:
+      - "8080:8080"   # REST API
+      - "7337:7337"   # OTLP HTTP receiver
+    depends_on:
+      opik-mysql:
+        condition: service_healthy
+      opik-clickhouse:
+        condition: service_healthy
+      opik-redis:
+        condition: service_healthy
+    networks:
+      - otel
+
+  # ---------------------------------------------------------------------------
+  # Opik Frontend
+  # ---------------------------------------------------------------------------
+  opik-frontend:
+    image: ghcr.io/comet-ml/opik/opik-frontend:latest
+    container_name: opik-frontend
+    restart: unless-stopped
+    environment:
+      - OPIK_API_URL=http://opik-backend:8080
+    ports:
+      - "5173:5173"
+    depends_on:
+      - opik-backend
+    networks:
+      - otel
+
+  # ---------------------------------------------------------------------------
+  # MySQL — Opik metadata store
+  # ---------------------------------------------------------------------------
+  opik-mysql:
+    image: mysql:8.0
+    container_name: opik-mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${OPIK_MYSQL_ROOT_PASSWORD:-root_secret}
+      - MYSQL_DATABASE=opik
+      - MYSQL_USER=opik
+      - MYSQL_PASSWORD=${OPIK_MYSQL_PASSWORD:-opik_secret}
+    volumes:
+      - opik_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "opik", "--password=${OPIK_MYSQL_PASSWORD:-opik_secret}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - otel
+
+  # ---------------------------------------------------------------------------
+  # ClickHouse — Opik trace & span storage
+  # ---------------------------------------------------------------------------
+  opik-clickhouse:
+    image: clickhouse/clickhouse-server:24-alpine
+    container_name: opik-clickhouse
+    restart: unless-stopped
+    environment:
+      - CLICKHOUSE_DB=opik
+      - CLICKHOUSE_USER=opik
+      - CLICKHOUSE_PASSWORD=${OPIK_CLICKHOUSE_PASSWORD:-opik_secret}
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - opik_clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      - otel
+
+  # ---------------------------------------------------------------------------
+  # Redis — Opik caching & queuing
+  # ---------------------------------------------------------------------------
+  opik-redis:
+    image: redis:7-alpine
+    container_name: opik-redis
+    restart: unless-stopped
+    volumes:
+      - opik_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - otel
+
+  # ---------------------------------------------------------------------------
+  # OTEL Collector override — adds Opik as a trace exporter
+  # This service block MERGES with the otel-collector in docker-compose.yml
+  # ---------------------------------------------------------------------------
+  otel-collector:
+    volumes:
+      - ./otel-collector/config.opik.yml:/etc/otel/config.yml:ro
+
+volumes:
+  opik_mysql_data:
+  opik_clickhouse_data:
+  opik_redis_data:
+
+networks:
+  otel:
+    name: otel-network
