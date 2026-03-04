@@ -12,6 +12,7 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
         cors:
+          # Dev-only: allow browser-based OTLP from any origin
           allowed_origins:
             - "http://*"
             - "https://*"
@@ -41,6 +42,9 @@ processors:
         value: "contrib-latest"
         action: insert
 
+extensions:
+  health_check:
+
 exporters:
   prometheus:
     endpoint: 0.0.0.0:8889
@@ -57,10 +61,8 @@ exporters:
       insecure: true
 
   # ── Opik — receives all traces, surfaces LLM spans in its UI ──────────────
-  otlp/opik:
-    endpoint: opik-backend:7337
-    tls:
-      insecure: true
+  otlphttp/opik:
+    endpoint: http://opik-backend:7337
 
   loki:
     endpoint: http://loki:3100/loki/api/v1/push
@@ -71,9 +73,10 @@ exporters:
       Content-Type: application/json
 
   debug:
-    verbosity: basic
+    verbosity: basic   # enable in pipelines for troubleshooting only
 
 service:
+  extensions: [health_check]
   telemetry:
     logs:
       level: warn
@@ -83,15 +86,15 @@ service:
   pipelines:
     traces:
       receivers:  [otlp]
-      processors: [memory_limiter, batch]
-      exporters:  [otlp/tempo, otlp/opik, debug]   # <-- Opik added here
+      processors: [memory_limiter, resource, batch]
+      exporters:  [otlp/tempo, otlphttp/opik]   # <-- Opik added here
 
     metrics:
       receivers:  [otlp, prometheus/self]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, resource, batch]
       exporters:  [prometheus]
 
     logs:
       receivers:  [otlp]
-      processors: [memory_limiter, batch]
-      exporters:  [loki, debug]
+      processors: [memory_limiter, resource, batch]
+      exporters:  [loki]

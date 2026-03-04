@@ -25,7 +25,7 @@ services:
   # Opik Backend
   # ---------------------------------------------------------------------------
   opik-backend:
-    image: ghcr.io/comet-ml/opik/opik-backend:latest
+    image: ghcr.io/comet-ml/opik/opik-backend:${OPIK_BACKEND_VERSION:-0.9.0}
     container_name: opik-backend
     restart: unless-stopped
     environment:
@@ -59,7 +59,7 @@ services:
   # Opik Frontend
   # ---------------------------------------------------------------------------
   opik-frontend:
-    image: ghcr.io/comet-ml/opik/opik-frontend:latest
+    image: ghcr.io/comet-ml/opik/opik-frontend:${OPIK_FRONTEND_VERSION:-0.9.0}
     container_name: opik-frontend
     restart: unless-stopped
     environment:
@@ -75,7 +75,7 @@ services:
   # MySQL — Opik metadata store
   # ---------------------------------------------------------------------------
   opik-mysql:
-    image: mysql:8.0
+    image: mysql:${OPIK_MYSQL_VERSION:-8.0.36}
     container_name: opik-mysql
     restart: unless-stopped
     environment:
@@ -98,7 +98,7 @@ services:
   # ClickHouse — Opik trace & span storage
   # ---------------------------------------------------------------------------
   opik-clickhouse:
-    image: clickhouse/clickhouse-server:24-alpine
+    image: clickhouse/clickhouse-server:${OPIK_CLICKHOUSE_VERSION:-24.3-alpine}
     container_name: opik-clickhouse
     restart: unless-stopped
     environment:
@@ -125,7 +125,7 @@ services:
   # Redis — Opik caching & queuing
   # ---------------------------------------------------------------------------
   opik-redis:
-    image: redis:7-alpine
+    image: redis:${OPIK_REDIS_VERSION:-7.2-alpine}
     container_name: opik-redis
     restart: unless-stopped
     volumes:

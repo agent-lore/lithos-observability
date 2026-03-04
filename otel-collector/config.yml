@@ -14,6 +14,7 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
         cors:
+          # Dev-only: allow browser-based OTLP from any origin
           allowed_origins:
             - "http://*"
             - "https://*"
@@ -47,6 +48,9 @@ processors:
         value: "contrib-latest"
         action: insert
 
+extensions:
+  health_check:
+
 exporters:
   # ── Metrics → Prometheus ──────────────────────────────────────────────────
   prometheus:
@@ -75,9 +79,10 @@ exporters:
 
   # ── Debug (stdout) — useful for troubleshooting ───────────────────────────
   debug:
-    verbosity: basic   # change to "detailed" to see full span data
+    verbosity: basic   # enable in pipelines for troubleshooting only
 
 service:
+  extensions: [health_check]
   telemetry:
     logs:
       level: warn
@@ -87,15 +92,15 @@ service:
   pipelines:
     traces:
       receivers:  [otlp]
-      processors: [memory_limiter, batch]
-      exporters:  [otlp/tempo, debug]
+      processors: [memory_limiter, resource, batch]
+      exporters:  [otlp/tempo]
 
     metrics:
       receivers:  [otlp, prometheus/self]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, resource, batch]
       exporters:  [prometheus]
 
     logs:
       receivers:  [otlp]
-      processors: [memory_limiter, batch]
-      exporters:  [loki, debug]
+      processors: [memory_limiter, resource, batch]
+      exporters:  [loki]

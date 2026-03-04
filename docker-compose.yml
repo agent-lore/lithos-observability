@@ -26,7 +26,7 @@ services:
   # Point your services at: OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
   # ---------------------------------------------------------------------------
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    image: otel/opentelemetry-collector-contrib:${OTEL_COLLECTOR_VERSION:-0.96.0}
     container_name: otel-collector
     restart: unless-stopped
     command: ["--config=/etc/otel/config.yml"]
@@ -37,18 +37,27 @@ services:
       - "4318:4318"   # OTLP HTTP receiver
       - "8888:8888"   # Collector self-metrics (Prometheus format)
       - "8889:8889"   # Prometheus exporter endpoint (scraped by Prometheus)
+      - "13133:13133" # Collector health check
     depends_on:
-      - prometheus
-      - tempo
-      - loki
+      prometheus:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
     networks:
       - otel
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:13133/ > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
   # ---------------------------------------------------------------------------
   # Prometheus — metrics storage & alerting
   # ---------------------------------------------------------------------------
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v2.51.2}
     container_name: prometheus
     restart: unless-stopped
     command:
@@ -64,12 +73,17 @@ services:
       - "9090:9090"
     networks:
       - otel
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/ready > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
   # ---------------------------------------------------------------------------
   # Grafana Tempo — distributed trace storage
   # ---------------------------------------------------------------------------
   tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo:${TEMPO_VERSION:-2.4.1}
     container_name: tempo
     restart: unless-stopped
     command: ["-config.file=/etc/tempo/tempo-config.yml"]
@@ -80,12 +94,17 @@ services:
       - "3200:3200"   # Tempo HTTP API (queried by Grafana)
     networks:
       - otel
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3200/ready > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
   # ---------------------------------------------------------------------------
   # Grafana Loki — log aggregation
   # ---------------------------------------------------------------------------
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:${LOKI_VERSION:-2.9.4}
     container_name: loki
     restart: unless-stopped
     command: ["-config.file=/etc/loki/loki-config.yml"]
@@ -96,12 +115,17 @@ services:
       - "3100:3100"
     networks:
       - otel
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
   # ---------------------------------------------------------------------------
   # Grafana — unified dashboards (metrics + traces + logs in one UI)
   # ---------------------------------------------------------------------------
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:${GRAFANA_VERSION:-10.4.3}
     container_name: grafana
     restart: unless-stopped
     environment:
@@ -117,11 +141,19 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - prometheus
-      - tempo
-      - loki
+      prometheus:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
     networks:
       - otel
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
 volumes:
   prometheus_data:

@@ -179,6 +179,36 @@ Your Services
 
 ---
 
+## Version Pinning
+
+Docker images are pinned via variables in `.env` (see `.env.example`) to keep the
+stack reproducible. To upgrade, edit your `.env` and bump versions in one place:
+
+```bash
+# Core
+OTEL_COLLECTOR_VERSION=0.96.0
+PROMETHEUS_VERSION=v2.51.2
+GRAFANA_VERSION=10.4.3
+TEMPO_VERSION=2.4.1
+LOKI_VERSION=2.9.4
+
+# Opik (optional)
+OPIK_BACKEND_VERSION=0.9.0
+OPIK_FRONTEND_VERSION=0.9.0
+OPIK_MYSQL_VERSION=8.0.36
+OPIK_CLICKHOUSE_VERSION=24.3-alpine
+OPIK_REDIS_VERSION=7.2-alpine
+```
+
+After changes, restart the stack:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+---
+
 ## Useful Commands
 
 ```bash
@@ -231,7 +261,9 @@ Good community dashboards to import from grafana.com:
 
 **Spans not appearing in Grafana?**
 1. Check the collector received them: `docker logs otel-collector`
-2. Verify your service is sending to the right endpoint: `curl http://localhost:4318` should return a response
+2. Verify your service is sending to the right endpoint:
+   - OTLP/HTTP expects POST requests. A quick smoke test:
+     `curl -v -X POST http://localhost:4318/v1/traces`
 3. Tempo span metrics take ~1 minute to appear in Prometheus
 
 **Opik not starting?**
