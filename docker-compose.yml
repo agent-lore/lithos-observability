@@ -48,7 +48,7 @@ services:
     networks:
       - otel
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:13133/ > /dev/null || exit 1"]
+      test: ["CMD", "/otelcol-contrib", "--version"]
       interval: 10s
       timeout: 3s
       retries: 10
