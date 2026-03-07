@@ -64,7 +64,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (service_name) (rate(otel_traces_spanmetrics_calls_total{span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[5m]))",
+          "expr": "sum by (service) (rate(traces_spanmetrics_calls_total{span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[5m]))",
           "legendFormat": "{{service_name}}",
           "refId": "A"
         }
@@ -106,7 +106,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (service_name) (rate(otel_traces_spanmetrics_calls_total{status_code=\"STATUS_CODE_ERROR\"}[5m])) / sum by (service_name) (rate(otel_traces_spanmetrics_calls_total{}[5m]))",
+          "expr": "sum by (service) (rate(traces_spanmetrics_calls_total{status_code=\"STATUS_CODE_ERROR\"}[5m])) / sum by (service) (rate(traces_spanmetrics_calls_total{}[5m]))",
           "legendFormat": "{{service_name}}",
           "refId": "A"
         }
@@ -145,7 +145,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.50, sum by (service_name, le) (rate(otel_traces_spanmetrics_duration_milliseconds_bucket{span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (service, le) (rate(traces_spanmetrics_latency_bucket{span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[5m])))",
           "legendFormat": "p50 {{service_name}}",
           "refId": "A"
         },
@@ -154,7 +154,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (service_name, le) (rate(otel_traces_spanmetrics_duration_milliseconds_bucket{span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (service, le) (rate(traces_spanmetrics_latency_bucket{span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[5m])))",
           "legendFormat": "p95 {{service_name}}",
           "refId": "B"
         },
@@ -163,7 +163,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.99, sum by (service_name, le) (rate(otel_traces_spanmetrics_duration_milliseconds_bucket{span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (service, le) (rate(traces_spanmetrics_latency_bucket{span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[5m])))",
           "legendFormat": "p99 {{service_name}}",
           "refId": "C"
         }
@@ -208,7 +208,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (service_name) (otel_traces_spanmetrics_calls_total)",
+          "expr": "sum by (service) (traces_spanmetrics_calls_total)",
           "legendFormat": "{{service_name}}",
           "refId": "A"
         }
@@ -302,7 +302,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(otelcol_receiver_accepted_spans_total[5m])",
+          "expr": "rate(otelcol_receiver_accepted_spans[5m])",
           "legendFormat": "accepted spans/s",
           "refId": "A"
         },

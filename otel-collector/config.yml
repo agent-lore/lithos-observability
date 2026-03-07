@@ -65,8 +65,6 @@ exporters:
     default_labels_enabled:
       exporter: false
       job: true
-    headers:
-      Content-Type: application/json
 
   # ── Debug (stdout) — useful for troubleshooting ───────────────────────────
   debug:
