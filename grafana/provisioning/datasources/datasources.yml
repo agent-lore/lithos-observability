@@ -8,7 +8,7 @@ datasources:
   - name: Prometheus
     type: prometheus
     uid: prometheus
-    version: 2
+    version: 99
     url: http://prometheus:9090
     access: proxy
     isDefault: true
@@ -21,7 +21,7 @@ datasources:
   - name: Tempo
     type: tempo
     uid: tempo
-    version: 2
+    version: 99
     url: http://tempo:3200
     access: proxy
     jsonData:
@@ -55,7 +55,7 @@ datasources:
   - name: Loki
     type: loki
     uid: loki
-    version: 2
+    version: 99
     url: http://loki:3100
     access: proxy
     jsonData:
