@@ -8,6 +8,7 @@ datasources:
   - name: Prometheus
     type: prometheus
     uid: prometheus
+    version: 2
     url: http://prometheus:9090
     access: proxy
     isDefault: true
@@ -20,6 +21,7 @@ datasources:
   - name: Tempo
     type: tempo
     uid: tempo
+    version: 2
     url: http://tempo:3200
     access: proxy
     jsonData:
@@ -53,12 +55,13 @@ datasources:
   - name: Loki
     type: loki
     uid: loki
+    version: 2
     url: http://loki:3100
     access: proxy
     jsonData:
       derivedFields:
         - datasourceUid: tempo
-          matcherRegex: "(?i)trace(?:_|\\s)?id[=:\\\"\\s]+([0-9a-f]+)"
+          matcherRegex: "[Tt][Rr][Aa][Cc][Ee](_|\\s)?[Ii][Dd][=:\\\"\\s]+([0-9a-f]+)"
           name: TraceID
           url: "$${__value.raw}"
           urlDisplayLabel: View Trace
