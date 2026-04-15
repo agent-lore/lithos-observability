@@ -33,7 +33,7 @@ docker compose up -d
 ```
 
 Grafana will be available at **http://localhost:3000** (admin / admin by default).  
-Datasources (Prometheus, Tempo, Loki) and the OTEL overview dashboard are provisioned automatically.
+Datasources (Prometheus, Tempo, Loki) and dashboards are provisioned automatically.
 
 ### 3. Point your service at the collector
 
@@ -137,6 +137,55 @@ See `examples/lithos.env` for the full reference.
 
 ---
 
+## Multi-Environment Monitoring
+
+You can monitor multiple instances of the same service (e.g. production, staging, dev)
+through a single observability stack. Each instance is distinguished by the
+`deployment.environment` resource attribute using the standard OTEL environment variable:
+
+```bash
+# Production
+OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
+
+# Staging
+OTEL_RESOURCE_ATTRIBUTES=deployment.environment=staging
+
+# Dev
+OTEL_RESOURCE_ATTRIBUTES=deployment.environment=dev
+```
+
+No code changes are needed — the OTEL SDK reads `OTEL_RESOURCE_ATTRIBUTES` automatically.
+
+### How the attribute flows through the stack
+
+| Backend | How it arrives | Configuration |
+|---------|---------------|---------------|
+| **Prometheus** | Becomes a `deployment_environment` metric label | Automatic — `resource_to_telemetry_conversion` is enabled on the collector's Prometheus exporter |
+| **Tempo** | Stored as a resource attribute on every span, and included as a dimension in span metrics | Configured in `tempo/tempo-config.yml` under `span_metrics.dimensions` |
+| **Loki** | Promoted to a log stream label `deployment_environment` | Configured in `otel-collector/config.yml` under `loki.resource_attributes` |
+
+### Dashboard filtering
+
+All three Grafana dashboards include an **Environment** dropdown that filters by
+`deployment.environment`. When "All" is selected, data from every environment is shown.
+When no environments have been configured yet, the dropdown is empty and all data is
+shown — existing setups continue to work without changes.
+
+### Example: Lithos with environment
+
+```yaml
+environment:
+  - LITHOS_OTEL_ENABLED=true
+  - OTEL_SERVICE_NAME=lithos
+  - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318
+  - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
+  - OTEL_TRACES_EXPORTER=otlp
+  - OTEL_METRICS_EXPORTER=otlp
+  - OTEL_LOGS_EXPORTER=otlp
+```
+
+---
+
 ## Architecture
 
 ```
@@ -166,6 +215,47 @@ Your Services
                       + Opik (optional)
                     (LLM trace analysis)
 ```
+
+---
+
+## Grafana Dashboards
+
+Three dashboards are provisioned automatically:
+
+### Service Health
+
+Generic RED (Rate, Errors, Duration) dashboard for any OTEL-instrumented service.
+
+- Request rate, error rate, and latency percentiles (p50 / p95 / p99)
+- Top span names by call rate
+- Live service logs with health-check noise filtered out
+- OTEL Collector ingestion rate, export failures, and memory usage
+- Filterable by **Service** and **Environment** dropdowns
+
+### Lithos Operations
+
+Deep dive into Lithos-specific custom metrics:
+
+- **Knowledge Store** — document count, stale documents, CRUD rates, write latency
+- **Search** — search rate and latency by type (fulltext / semantic / hybrid / graph), index sizes
+- **Cache** — hit rate, lookup outcomes, lookup latency
+- **Tool Usage** — MCP tool call rates, errors, and totals by tool name
+- **Graph & Coordination** — knowledge graph size, task operations, active claims
+- **Event Bus & SSE** — event activity, active SSE clients, buffer utilization
+
+### LCMA Performance
+
+Lithos LCMA retrieval pipeline performance:
+
+- **Retrieval** — end-to-end retrieval latency, candidates-vs-results funnel
+- **Scouts** — per-scout latency and candidate counts (all 10 scouts)
+- **Enrich Queue** — queue depth, processing lag, attempt distribution
+- **Working Memory** — coactivation pairs, active tasks, state trends over time
+
+All dashboards cross-link to each other and share the time range and variable selections.
+
+To add more dashboards: drop JSON files into `grafana/dashboards/` — they are  
+hot-reloaded every 30 seconds.
 
 ---
 
@@ -230,30 +320,12 @@ docker compose down -v
 # Reload Prometheus config without restart
 curl -X POST http://localhost:9090/-/reload
 
+# Reload Grafana dashboard provisioning without restart
+curl -X POST -u admin:admin http://localhost:3000/api/admin/provisioning/dashboards/reload
+
 # Check collector health
 curl http://localhost:13133/   # returns {"status":"Server available"}
 ```
-
----
-
-## Grafana Dashboards
-
-The **OTEL Services Overview** dashboard is provisioned automatically and shows:
-
-- Request rate by service
-- Error rate by service  
-- Latency percentiles (p50 / p95 / p99)
-- Total spans by service
-- All service logs (live stream)
-- Collector health (spans received, memory)
-
-To add more dashboards: drop JSON files into `grafana/dashboards/` — they are  
-hot-reloaded every 30 seconds.
-
-Good community dashboards to import from grafana.com:
-- **Node Exporter Full** (ID: 1860) — host metrics
-- **Tempo / TraceQL** (ID: 16543) — trace explorer
-- **Loki Dashboard** (ID: 13639) — log explorer
 
 ---
 
@@ -280,6 +352,7 @@ Good community dashboards to import from grafana.com:
 1. Instrument your service with the OTEL SDK (see `examples/`)
 2. Set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`
 3. Set `OTEL_SERVICE_NAME=your-service-name`
-4. That's it — your service appears in Grafana automatically
+4. Optionally set `OTEL_RESOURCE_ATTRIBUTES=deployment.environment=dev` for environment filtering
+5. That's it — your service appears in Grafana automatically
 
 No collector config changes needed. The collector accepts any OTLP-speaking service.

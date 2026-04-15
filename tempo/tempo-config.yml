@@ -43,4 +43,12 @@ storage:
       path: /var/tempo/blocks
 
 overrides:
+  defaults:
+    metrics_generator:
+      processors:
+        service_graphs:
+        span_metrics:
+          dimensions:
+            - deployment.environment
+      generate_native_histograms: both
   metrics_generator_processors: [service-graphs, span-metrics]
