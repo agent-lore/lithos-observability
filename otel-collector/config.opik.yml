@@ -69,6 +69,9 @@ exporters:
     default_labels_enabled:
       exporter: false
       job: true
+    resource_attributes:
+      deployment.environment:
+        enabled: true
     headers:
       Content-Type: application/json
 

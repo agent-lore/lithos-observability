@@ -1,8 +1,10 @@
 {
   "__inputs": [],
   "__requires": [],
-  "annotations": { "list": [] },
-  "description": "LCMA retrieval pipeline performance — scouts, enrich queue, coactivation, and working memory",
+  "annotations": {
+    "list": []
+  },
+  "description": "LCMA retrieval pipeline performance \u2014 scouts, enrich queue, coactivation, and working memory",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -31,22 +33,59 @@
       "url": "/d/service-health/service-health"
     }
   ],
-  "templating": { "list": [] },
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(otel_lithos_lcma_retrieve_duration_ms_milliseconds_count, deployment_environment)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "environment",
+        "label": "Environment",
+        "options": [],
+        "query": {
+          "query": "label_values(otel_lithos_lcma_retrieve_duration_ms_milliseconds_count, deployment_environment)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query",
+        "allValue": ".*"
+      }
+    ]
+  },
   "panels": [
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "id": 100,
       "title": "Retrieval Pipeline",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "End-to-end run_retrieve latency",
       "fieldConfig": {
         "defaults": {
           "unit": "ms",
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 10,
@@ -57,32 +96,52 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
       "id": 1,
       "options": {
         "legend": {
-          "calcs": ["mean", "max"],
+          "calcs": [
+            "mean",
+            "max"
+          ],
           "displayMode": "table",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(otel_lithos_lcma_retrieve_duration_ms_milliseconds_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(otel_lithos_lcma_retrieve_duration_ms_milliseconds_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(otel_lithos_lcma_retrieve_duration_ms_milliseconds_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(otel_lithos_lcma_retrieve_duration_ms_milliseconds_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(otel_lithos_lcma_retrieve_duration_ms_milliseconds_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(otel_lithos_lcma_retrieve_duration_ms_milliseconds_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -91,12 +150,17 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Candidates considered vs final nodes returned per retrieval",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 15,
@@ -107,38 +171,61 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
       "id": 2,
       "options": {
         "legend": {
-          "calcs": ["mean", "max"],
+          "calcs": [
+            "mean",
+            "max"
+          ],
           "displayMode": "table",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(otel_lithos_lcma_retrieve_candidates_considered_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(otel_lithos_lcma_retrieve_candidates_considered_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "candidates p50",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(otel_lithos_lcma_retrieve_candidates_considered_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(otel_lithos_lcma_retrieve_candidates_considered_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "candidates p95",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(otel_lithos_lcma_retrieve_final_nodes_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(otel_lithos_lcma_retrieve_final_nodes_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "final nodes p50",
           "refId": "C"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(otel_lithos_lcma_retrieve_final_nodes_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(otel_lithos_lcma_retrieve_final_nodes_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "final nodes p95",
           "refId": "D"
         }
@@ -147,12 +234,17 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Retrieval rate and salience update rate",
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 15,
@@ -163,32 +255,52 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
       "id": 3,
       "options": {
         "legend": {
-          "calcs": ["mean", "sum"],
+          "calcs": [
+            "mean",
+            "sum"
+          ],
           "displayMode": "table",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "rate(otel_lithos_lcma_retrieve_duration_ms_milliseconds_count[5m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(otel_lithos_lcma_retrieve_duration_ms_milliseconds_count{deployment_environment=~\"$environment\"}[5m])",
           "legendFormat": "retrievals/s",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "rate(otel_lithos_lcma_salience_updates_total[5m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(otel_lithos_lcma_salience_updates_total{deployment_environment=~\"$environment\"}[5m])",
           "legendFormat": "salience updates/s",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "rate(otel_lithos_lcma_temperature_cold_start_total[5m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(otel_lithos_lcma_temperature_cold_start_total{deployment_environment=~\"$environment\"}[5m])",
           "legendFormat": "cold starts/s",
           "refId": "C"
         }
@@ -196,21 +308,30 @@
       "title": "Retrieval & Salience Activity",
       "type": "timeseries"
     },
-
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
       "id": 200,
       "title": "Scouts",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Per-scout invocation latency",
       "fieldConfig": {
         "defaults": {
           "unit": "ms",
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 10,
@@ -221,28 +342,45 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 10 },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
       "id": 10,
       "options": {
         "legend": {
-          "calcs": ["mean", "max"],
+          "calcs": [
+            "mean",
+            "max"
+          ],
           "displayMode": "table",
           "placement": "right",
           "sortBy": "Mean",
           "sortDesc": true
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum by (scout, le) (rate(otel_lithos_lcma_scout_duration_ms_milliseconds_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.50, sum by (scout, le) (rate(otel_lithos_lcma_scout_duration_ms_milliseconds_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "p50 {{scout}}",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum by (scout, le) (rate(otel_lithos_lcma_scout_duration_ms_milliseconds_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (scout, le) (rate(otel_lithos_lcma_scout_duration_ms_milliseconds_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "p95 {{scout}}",
           "refId": "B"
         }
@@ -251,12 +389,17 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Candidates returned per scout invocation",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 15,
@@ -267,28 +410,45 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 10 },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
       "id": 11,
       "options": {
         "legend": {
-          "calcs": ["mean", "max"],
+          "calcs": [
+            "mean",
+            "max"
+          ],
           "displayMode": "table",
           "placement": "right",
           "sortBy": "Mean",
           "sortDesc": true
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum by (scout, le) (rate(otel_lithos_lcma_scout_candidates_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.50, sum by (scout, le) (rate(otel_lithos_lcma_scout_candidates_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "p50 {{scout}}",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum by (scout, le) (rate(otel_lithos_lcma_scout_candidates_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (scout, le) (rate(otel_lithos_lcma_scout_candidates_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "p95 {{scout}}",
           "refId": "B"
         }
@@ -296,16 +456,23 @@
       "title": "Scout Candidates Returned (p50 / p95)",
       "type": "timeseries"
     },
-
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      },
       "id": 300,
       "title": "Enrich Queue",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Current unprocessed items in the enrich queue",
       "fieldConfig": {
         "defaults": {
@@ -316,26 +483,47 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "orange", "value": 50 },
-              { "color": "red", "value": 200 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 200
+              }
             ]
           }
         },
         "overrides": []
       },
-      "gridPos": { "h": 7, "w": 4, "x": 0, "y": 20 },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 0,
+        "y": 20
+      },
       "id": 20,
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area",
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "otel_lithos_lcma_enrich_queue_depth",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "otel_lithos_lcma_enrich_queue_depth{deployment_environment=~\"$environment\"}",
           "legendFormat": "",
           "refId": "A"
         }
@@ -344,12 +532,17 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Time from triggered_at to processed_at per enrich queue item",
       "fieldConfig": {
         "defaults": {
           "unit": "ms",
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 10,
@@ -360,32 +553,52 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 7, "w": 10, "x": 4, "y": 20 },
+      "gridPos": {
+        "h": 7,
+        "w": 10,
+        "x": 4,
+        "y": 20
+      },
       "id": 21,
       "options": {
         "legend": {
-          "calcs": ["mean", "max"],
+          "calcs": [
+            "mean",
+            "max"
+          ],
           "displayMode": "table",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(otel_lithos_lcma_enrich_queue_processing_lag_ms_milliseconds_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(otel_lithos_lcma_enrich_queue_processing_lag_ms_milliseconds_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(otel_lithos_lcma_enrich_queue_processing_lag_ms_milliseconds_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(otel_lithos_lcma_enrich_queue_processing_lag_ms_milliseconds_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(otel_lithos_lcma_enrich_queue_processing_lag_ms_milliseconds_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(otel_lithos_lcma_enrich_queue_processing_lag_ms_milliseconds_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -394,12 +607,17 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Attempt count distribution and exhausted items (abandoned after max retries)",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 15,
@@ -410,32 +628,52 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 7, "w": 10, "x": 14, "y": 20 },
+      "gridPos": {
+        "h": 7,
+        "w": 10,
+        "x": 14,
+        "y": 20
+      },
       "id": 22,
       "options": {
         "legend": {
-          "calcs": ["mean", "sum"],
+          "calcs": [
+            "mean",
+            "sum"
+          ],
           "displayMode": "table",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(otel_lithos_lcma_enrich_queue_attempts_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(otel_lithos_lcma_enrich_queue_attempts_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "attempts p50",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(otel_lithos_lcma_enrich_queue_attempts_bucket[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(otel_lithos_lcma_enrich_queue_attempts_bucket{deployment_environment=~\"$environment\"}[5m])))",
           "legendFormat": "attempts p95",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "rate(otel_lithos_lcma_enrich_exhausted_total[5m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(otel_lithos_lcma_enrich_exhausted_total{deployment_environment=~\"$environment\"}[5m])",
           "legendFormat": "exhausted/s",
           "refId": "C"
         }
@@ -443,42 +681,67 @@
       "title": "Enrich Attempts & Exhaustions",
       "type": "timeseries"
     },
-
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
       "id": 400,
       "title": "Working Memory & Coactivation",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Total rows in the coactivation table",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "fixed", "fixedColor": "purple" },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "purple", "value": null }
+              {
+                "color": "purple",
+                "value": null
+              }
             ]
           }
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 28 },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 0,
+        "y": 28
+      },
       "id": 30,
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area",
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "otel_lithos_lcma_coactivation_pairs",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "otel_lithos_lcma_coactivation_pairs{deployment_environment=~\"$environment\"}",
           "legendFormat": "",
           "refId": "A"
         }
@@ -487,33 +750,54 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Distinct task_ids with activity in last 24h",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "blue", "value": null }
+              {
+                "color": "blue",
+                "value": null
+              }
             ]
           }
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 4, "x": 4, "y": 28 },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 4,
+        "y": 28
+      },
       "id": 31,
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area",
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "otel_lithos_lcma_working_memory_active_tasks",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "otel_lithos_lcma_working_memory_active_tasks{deployment_environment=~\"$environment\"}",
           "legendFormat": "",
           "refId": "A"
         }
@@ -522,12 +806,17 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "Coactivation and working memory gauges over time",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 15,
@@ -538,32 +827,53 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 16, "x": 8, "y": 28 },
+      "gridPos": {
+        "h": 6,
+        "w": 16,
+        "x": 8,
+        "y": 28
+      },
       "id": 32,
       "options": {
         "legend": {
-          "calcs": ["min", "max", "lastNotNull"],
+          "calcs": [
+            "min",
+            "max",
+            "lastNotNull"
+          ],
           "displayMode": "table",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "otel_lithos_lcma_coactivation_pairs",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "otel_lithos_lcma_coactivation_pairs{deployment_environment=~\"$environment\"}",
           "legendFormat": "coactivation pairs",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "otel_lithos_lcma_working_memory_active_tasks",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "otel_lithos_lcma_working_memory_active_tasks{deployment_environment=~\"$environment\"}",
           "legendFormat": "active tasks (24h)",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "otel_lithos_lcma_enrich_queue_depth",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "otel_lithos_lcma_enrich_queue_depth{deployment_environment=~\"$environment\"}",
           "legendFormat": "enrich queue depth",
           "refId": "C"
         }
@@ -574,8 +884,15 @@
   ],
   "refresh": "30s",
   "schemaVersion": 39,
-  "tags": ["lithos", "lcma", "observability"],
-  "time": { "from": "now-3h", "to": "now" },
+  "tags": [
+    "lithos",
+    "lcma",
+    "observability"
+  ],
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "browser",
   "title": "LCMA Performance",
