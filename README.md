@@ -171,6 +171,23 @@ All three Grafana dashboards include an **Environment** dropdown that filters by
 When no environments have been configured yet, the dropdown is empty and all data is
 shown — existing setups continue to work without changes.
 
+### Naming conventions
+
+`deployment.environment` is a free-form string in the OTEL spec, but downstream
+tooling treats it as an opaque exact-match label. Keep names consistent or your
+filters will silently split data across variants (e.g. `prod` vs `production`).
+
+Recommended practices:
+
+- **Lowercase, no spaces.** `fuzzing` not `Fuzzing` not `Fuzz Testing`.
+- **Pick full words** unless the abbreviation is universally understood (`prod`, `dev`).
+- **Use the same value across all services and restarts** — once you've chosen `production`, don't also tag instances as `prod`.
+- **Avoid values that may collide with tooling defaults:** `all`, `none`, `default`.
+- **Prefer specific over generic** when the workload profile matters. `fuzzing` conveys "expect bad numbers, don't alert" better than a generic `testing`.
+
+Common values: `production`, `staging`, `development` (or `dev`), `testing`, `qa`,
+`canary`, `fuzzing`, `load-test`.
+
 ### Example: Lithos with environment
 
 ```yaml
