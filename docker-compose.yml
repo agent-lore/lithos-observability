@@ -26,7 +26,7 @@ services:
   # Point your services at: OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
   # ---------------------------------------------------------------------------
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:${OTEL_COLLECTOR_VERSION:-0.96.0}
+    image: otel/opentelemetry-collector-contrib:${OTEL_COLLECTOR_VERSION:-0.113.0}
     container_name: otel-collector
     restart: unless-stopped
     command: ["--config=/etc/otel/config.yml"]
@@ -57,7 +57,7 @@ services:
   # Prometheus — metrics storage & alerting
   # ---------------------------------------------------------------------------
   prometheus:
-    image: prom/prometheus:${PROMETHEUS_VERSION:-v2.51.2}
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v2.55.1}
     container_name: prometheus
     restart: unless-stopped
     command:
@@ -83,7 +83,7 @@ services:
   # Grafana Tempo — distributed trace storage
   # ---------------------------------------------------------------------------
   tempo:
-    image: grafana/tempo:${TEMPO_VERSION:-2.4.1}
+    image: grafana/tempo:${TEMPO_VERSION:-2.7.1}
     container_name: tempo
     restart: unless-stopped
     command: ["-config.file=/etc/tempo/tempo-config.yml"]
@@ -125,7 +125,7 @@ services:
   # Grafana — unified dashboards (metrics + traces + logs in one UI)
   # ---------------------------------------------------------------------------
   grafana:
-    image: grafana/grafana:${GRAFANA_VERSION:-10.4.3}
+    image: grafana/grafana:${GRAFANA_VERSION:-11.4.0}
     container_name: grafana
     restart: unless-stopped
     environment:

@@ -38,7 +38,12 @@ processors:
       - key: collector.version
         value: "contrib-latest"
         action: insert
-      # Hint the Loki exporter to promote deployment.environment to a log label
+
+  # Logs-only: hint the Loki exporter to promote deployment.environment to a label.
+  # Kept off the shared `resource` processor so this attribute does not leak into
+  # span tags or Prometheus metric labels.
+  resource/loki_hints:
+    attributes:
       - key: loki.resource.labels
         value: "deployment.environment"
         action: insert
@@ -95,5 +100,5 @@ service:
 
     logs:
       receivers:  [otlp]
-      processors: [memory_limiter, resource, batch]
+      processors: [memory_limiter, resource, resource/loki_hints, batch]
       exporters:  [loki]

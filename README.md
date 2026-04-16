@@ -276,10 +276,10 @@ stack reproducible. To upgrade, edit your `.env` and bump versions in one place:
 
 ```bash
 # Core
-OTEL_COLLECTOR_VERSION=0.96.0
-PROMETHEUS_VERSION=v2.51.2
-GRAFANA_VERSION=10.4.3
-TEMPO_VERSION=2.4.1
+OTEL_COLLECTOR_VERSION=0.113.0
+PROMETHEUS_VERSION=v2.55.1
+GRAFANA_VERSION=11.4.0
+TEMPO_VERSION=2.7.1
 LOKI_VERSION=2.9.4
 
 # Opik (optional)
