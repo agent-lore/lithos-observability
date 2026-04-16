@@ -325,6 +325,10 @@ curl -X POST -u admin:admin http://localhost:3000/api/admin/provisioning/dashboa
 
 # Check collector health
 curl http://localhost:13133/   # returns {"status":"Server available"}
+
+# Run the full health check — containers, ingestion rates, export failures,
+# dashboards, datasources. Expects GRAFANA_PASSWORD in the environment.
+GRAFANA_PASSWORD=<your-password> ./scripts/health-check.sh
 ```
 
 ---
