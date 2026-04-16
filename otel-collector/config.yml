@@ -38,6 +38,10 @@ processors:
       - key: collector.version
         value: "contrib-latest"
         action: insert
+      # Hint the Loki exporter to promote deployment.environment to a log label
+      - key: loki.resource.labels
+        value: "deployment.environment"
+        action: insert
 
 extensions:
   health_check:
@@ -65,9 +69,6 @@ exporters:
     default_labels_enabled:
       exporter: false
       job: true
-    resource_attributes:
-      deployment.environment:
-        enabled: true
 
   # ── Debug (stdout) — useful for troubleshooting ───────────────────────────
   debug:
