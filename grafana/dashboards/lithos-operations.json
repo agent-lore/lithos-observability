@@ -662,7 +662,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(otel_lithos_cache_lookups_total{outcome=\"hit\", deployment_environment=~\"$environment\"}[5m]) / (rate(otel_lithos_cache_lookups_total{outcome=\"hit\"}[5m]) + rate(otel_lithos_cache_lookups_total{outcome=~\"miss_clean|miss_stale\"}[5m]))",
+          "expr": "sum(rate(otel_lithos_cache_lookups_total{outcome=\"hit\", deployment_environment=~\"$environment\"}[5m])) / sum(rate(otel_lithos_cache_lookups_total{outcome=~\"hit|miss_clean|miss_stale\", deployment_environment=~\"$environment\"}[5m]))",
           "legendFormat": "hit rate",
           "refId": "A"
         }
