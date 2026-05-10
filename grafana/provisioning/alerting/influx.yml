@@ -245,8 +245,13 @@ groups:
               to: 0
             datasourceUid: __expr__
             model:
+              # classic_conditions evaluator types: gt, lt, within_range,
+              # outside_range. There is no lte/gte, so "rate is zero"
+              # is expressed as "rate < small epsilon". rate() of a
+              # non-negative counter is always >= 0, so any positive
+              # epsilon below the smallest meaningful value works.
               conditions:
-                - evaluator: { params: [0], type: lte }
+                - evaluator: { params: [0.0000001], type: lt }
                   operator: { type: and }
                   query: { params: [A] }
                   reducer: { type: last, params: [] }
