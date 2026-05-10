@@ -1,0 +1,439 @@
+# =============================================================================
+# Influx Operations — Grafana-managed alert rules
+# Provisioned per: https://grafana.com/docs/grafana/latest/alerting/set-up/provision-alerting-resources/file-provisioning/
+#
+# Source: agent-lore/influx#37
+# Companion dashboard: grafana/dashboards/influx-operations.json (uid: influx-operations)
+# Runbook: https://github.com/agent-lore/influx/blob/main/docs/operations/staging-runbook.md
+#
+# Thresholds below are starting points. Tune after a week of staging traffic
+# (see "Tuning & silencing" in the repo README).
+#
+# Notification routing (contact points + notification policies) is intentionally
+# left unconfigured. Configure those separately per deployment; until then,
+# alerts still fire and are visible in the Grafana Alerting UI under the
+# "Influx" folder.
+# =============================================================================
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: influx-operations
+    folder: Influx
+    interval: 1m
+    rules:
+
+      # -------------------------------------------------------------------
+      # InfluxRunFailures
+      # Any sustained run-failure rate over the last hour.
+      # Panel: Failure Share (1h) (id 5) on dashboard influx-operations.
+      # -------------------------------------------------------------------
+      - uid: influx-run-failures
+        title: InfluxRunFailures
+        condition: B
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          severity: warning
+          service: influx
+        annotations:
+          summary: "Influx run failures detected ({{ $labels.deployment_environment }}/{{ $labels.profile }})"
+          description: |
+            One or more Influx runs have completed with outcome=failure in the
+            last hour for profile {{ $labels.profile }} in
+            {{ $labels.deployment_environment }}.
+          runbook_url: "https://github.com/agent-lore/influx/blob/main/docs/operations/staging-runbook.md#2-decide-if-there-is-a-problem"
+          __dashboardUid__: influx-operations
+          __panelId__: "5"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: |
+                sum by (deployment_environment, profile) (
+                  rate(otel_influx_run_completions_total{outcome="failure"}[1h])
+                )
+              instant: true
+              intervalMs: 60000
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0], type: gt }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              refId: B
+              type: classic_conditions
+
+      # -------------------------------------------------------------------
+      # InfluxWriteFailureSpike
+      # Lithos writes that aren't created/updated/duplicate (e.g.
+      # slug_collision, version_conflict, invalid_input, content_too_large).
+      # Panel: Non-success Writes (id 33).
+      # -------------------------------------------------------------------
+      - uid: influx-write-failure-spike
+        title: InfluxWriteFailureSpike
+        condition: B
+        for: 15m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          severity: warning
+          service: influx
+        annotations:
+          summary: "Influx Lithos write failure spike ({{ $labels.deployment_environment }}/{{ $labels.profile }} status={{ $labels.status }})"
+          description: |
+            Lithos writes are failing at >0.05/s for status
+            {{ $labels.status }} on profile {{ $labels.profile }}
+            ({{ $labels.deployment_environment }}). Likely causes:
+            slug-collision backlog, MCP transport issue, or schema drift.
+          runbook_url: "https://github.com/agent-lore/influx/blob/main/docs/operations/staging-runbook.md#8-cleaning-up-slug-collision-squatters"
+          __dashboardUid__: influx-operations
+          __panelId__: "33"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: |
+                sum by (deployment_environment, profile, status) (
+                  rate(otel_influx_lithos_writes_total{status!~"created|updated|duplicate"}[15m])
+                )
+              instant: true
+              intervalMs: 60000
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0.05], type: gt }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              refId: B
+              type: classic_conditions
+
+      # -------------------------------------------------------------------
+      # InfluxStuckRun
+      # More than two concurrent runs for the same profile for >30m.
+      # Per-profile lock should prevent this; firing means lock leak or
+      # abandoned-run cleanup is not happening.
+      # Panel: Active Runs by Profile (id 10).
+      # -------------------------------------------------------------------
+      - uid: influx-stuck-run
+        title: InfluxStuckRun
+        condition: B
+        for: 30m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          severity: warning
+          service: influx
+        annotations:
+          summary: "Influx has >2 active runs for {{ $labels.profile }} ({{ $labels.deployment_environment }})"
+          description: |
+            Active-run gauge for profile {{ $labels.profile }} has been >2
+            for at least 30 minutes. The per-profile lock should prevent
+            concurrent scheduled runs; check for stuck runs in
+            active-runs.json and abandoned-run recovery on the next tick.
+          runbook_url: "https://github.com/agent-lore/influx/blob/main/docs/operations/staging-runbook.md#3-drill-into-one-run"
+          __dashboardUid__: influx-operations
+          __panelId__: "10"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: |
+                sum by (deployment_environment, profile) (otel_influx_active_runs)
+              instant: true
+              intervalMs: 60000
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [2], type: gt }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              refId: B
+              type: classic_conditions
+
+      # -------------------------------------------------------------------
+      # InfluxCronStalled
+      # No run starts for any (env, profile) over the last 2h. Critical:
+      # this is "the scheduler stopped firing" — the dashboard shows you
+      # nothing, but nothing is happening either.
+      # Panel: Starts / min (15m) (id 2).
+      # NoData treated as alerting because a stale series (process dead)
+      # may not produce a sample at all.
+      # -------------------------------------------------------------------
+      - uid: influx-cron-stalled
+        title: InfluxCronStalled
+        condition: B
+        for: 5m
+        noDataState: Alerting
+        execErrState: Alerting
+        isPaused: false
+        labels:
+          severity: critical
+          service: influx
+        annotations:
+          summary: "Influx cron stalled for {{ $labels.profile }} ({{ $labels.deployment_environment }})"
+          description: |
+            No run_starts samples for {{ $labels.profile }} in
+            {{ $labels.deployment_environment }} over the last 2h. The
+            scheduler may be wedged, the container may be down, or OTEL
+            export may be broken. Check `/ready`, `docker ps`, and the
+            collector pipeline.
+          runbook_url: "https://github.com/agent-lore/influx/blob/main/docs/operations/staging-runbook.md#1-environment-quick-reference"
+          __dashboardUid__: influx-operations
+          __panelId__: "2"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 7200
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: |
+                sum by (deployment_environment, profile) (
+                  rate(otel_influx_run_starts_total[2h])
+                )
+              instant: true
+              intervalMs: 60000
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0], type: lte }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              refId: B
+              type: classic_conditions
+
+      # -------------------------------------------------------------------
+      # InfluxDegradedRunRate
+      # >20% of completions in the last hour are degraded. Degraded means
+      # the run finished but had a structured reason
+      # (source_acquisition / ingestion_stall / fetch_stall / filter_stall
+      # / filter_error). Sustained = a real problem, not a blip.
+      # Panel: Degraded Share (1h) (id 4).
+      # -------------------------------------------------------------------
+      - uid: influx-degraded-run-rate
+        title: InfluxDegradedRunRate
+        condition: B
+        for: 30m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          severity: warning
+          service: influx
+        annotations:
+          summary: "Influx degraded-run rate >20% for {{ $labels.profile }} ({{ $labels.deployment_environment }})"
+          description: |
+            More than 20% of completions for {{ $labels.profile }} in
+            {{ $labels.deployment_environment }} are landing degraded over
+            the last hour. Run `influx-diagnose.py failures` to see the
+            structured degraded_reasons.
+          runbook_url: "https://github.com/agent-lore/influx/blob/main/docs/operations/staging-runbook.md#2-decide-if-there-is-a-problem"
+          __dashboardUid__: influx-operations
+          __panelId__: "4"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: |
+                sum by (deployment_environment, profile) (
+                  rate(otel_influx_run_completions_total{outcome="degraded"}[1h])
+                )
+                /
+                clamp_min(
+                  sum by (deployment_environment, profile) (
+                    rate(otel_influx_run_completions_total[1h])
+                  ),
+                  1e-9
+                )
+              instant: true
+              intervalMs: 60000
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0.2], type: gt }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              refId: B
+              type: classic_conditions
+
+      # -------------------------------------------------------------------
+      # InfluxSourceFetchErrors
+      # Source acquisition errors (arXiv 429, RSS download failure, etc.)
+      # > 0.1/s sustained over 15m.
+      # Panel: Source Acquisition Errors (id 40).
+      # -------------------------------------------------------------------
+      - uid: influx-source-fetch-errors
+        title: InfluxSourceFetchErrors
+        condition: B
+        for: 15m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          severity: warning
+          service: influx
+        annotations:
+          summary: "Influx source fetch errors elevated ({{ $labels.deployment_environment }} source={{ $labels.source }})"
+          description: |
+            Source acquisition errors for source={{ $labels.source }} on
+            {{ $labels.profile }} are above 0.1/s over the last 15m. Check
+            for upstream rate limits (arXiv 429), DNS/network issues, or
+            feed-shape changes.
+          runbook_url: "https://github.com/agent-lore/influx/blob/main/docs/operations/staging-runbook.md#4-common-log-shapes"
+          __dashboardUid__: influx-operations
+          __panelId__: "40"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: |
+                sum by (deployment_environment, profile, source) (
+                  rate(otel_influx_source_acquisition_errors_total[15m])
+                )
+              instant: true
+              intervalMs: 60000
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0.1], type: gt }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              refId: B
+              type: classic_conditions
+
+      # -------------------------------------------------------------------
+      # InfluxLLMFailures
+      # LLM filter / enrich / extract validation failures > 0.05/s.
+      # Panel: LLM Validation Failures (id 41).
+      # -------------------------------------------------------------------
+      - uid: influx-llm-failures
+        title: InfluxLLMFailures
+        condition: B
+        for: 30m
+        noDataState: OK
+        execErrState: Error
+        isPaused: false
+        labels:
+          severity: warning
+          service: influx
+        annotations:
+          summary: "Influx LLM validation failures elevated (tier={{ $labels.tier }} profile={{ $labels.profile }})"
+          description: |
+            LLM validation failures for tier={{ $labels.tier }} on
+            {{ $labels.profile }} are above 0.05/s over the last hour.
+            Check provider availability, model output schema drift, and
+            recent prompt changes.
+          runbook_url: "https://github.com/agent-lore/influx/blob/main/docs/operations/staging-runbook.md#4-common-log-shapes"
+          __dashboardUid__: influx-operations
+          __panelId__: "41"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: |
+                sum by (deployment_environment, profile, tier) (
+                  rate(otel_influx_llm_validation_failures_total[1h])
+                )
+              instant: true
+              intervalMs: 60000
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0.05], type: gt }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              refId: B
+              type: classic_conditions
