@@ -276,6 +276,52 @@ hot-reloaded every 30 seconds.
 
 ---
 
+## Alerting
+
+Grafana-managed alert rules are provisioned from `grafana/provisioning/alerting/`.
+The directory is bind-mounted into the Grafana container alongside dashboards
+and datasources, so dropping a YAML file there is enough — no compose changes.
+
+Provisioned today:
+
+| File | Folder in Grafana UI | Source |
+|------|----------------------|--------|
+| `influx.yml` | **Influx** | [agent-lore/influx#37](https://github.com/agent-lore/influx/issues/37) |
+
+### Notification routing
+
+Contact points and notification policies are intentionally **not** committed.
+They are deployment-specific (Slack workspaces, pager keys, mailing lists) and
+should be configured per environment via the Grafana UI or a separate, secret-
+aware provisioning file kept out of this repo.
+
+Until contact points are configured, alerts still fire and are visible under
+**Alerting → Alert rules** in Grafana, grouped by folder. The default Grafana
+contact point is a no-op email channel — useful for verifying that rule wiring
+works end-to-end without sending real notifications.
+
+### Tuning & silencing
+
+Thresholds in `grafana/provisioning/alerting/influx.yml` are starting points
+taken from the issue body. Tune after a week of staging traffic:
+
+- **False positives:** raise the threshold or extend `for:` so transient spikes
+  don't page. Common offenders: `InfluxLLMFailures` during a known prompt
+  iteration, `InfluxSourceFetchErrors` during arXiv 429 storms.
+- **Silencing for known windows:** create a silence in **Alerting → Silences**
+  (matchers like `service=influx, deployment_environment=staging`). Silences
+  are runtime state and do not need to be checked in.
+- **Pausing a rule entirely:** set `isPaused: true` on the rule in the YAML and
+  redeploy — preferable to commenting out so the rule retains its UID and
+  history.
+- **Rule UIDs are stable**; renaming a rule's UID will create a duplicate and
+  lose its history.
+
+After editing the YAML, restart Grafana (or hit
+`POST /api/admin/provisioning/alerting/reload`) to pick up changes.
+
+---
+
 ## Data Retention
 
 | Backend | Default Retention | Configure via |
@@ -339,6 +385,9 @@ curl -X POST http://localhost:9090/-/reload
 
 # Reload Grafana dashboard provisioning without restart
 curl -X POST -u admin:admin http://localhost:3000/api/admin/provisioning/dashboards/reload
+
+# Reload Grafana alerting provisioning without restart
+curl -X POST -u admin:admin http://localhost:3000/api/admin/provisioning/alerting/reload
 
 # Check collector health
 curl http://localhost:13133/   # returns {"status":"Server available"}
