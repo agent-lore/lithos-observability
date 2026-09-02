@@ -31,6 +31,17 @@
       "title": "Service Health",
       "type": "link",
       "url": "/d/service-health/service-health"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Lens Operations",
+      "type": "link",
+      "url": "/d/lens-operations/lens-operations"
     }
   ],
   "templating": {

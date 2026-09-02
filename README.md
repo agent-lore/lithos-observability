@@ -166,7 +166,7 @@ No code changes are needed — the OTEL SDK reads `OTEL_RESOURCE_ATTRIBUTES` aut
 
 ### Dashboard filtering
 
-All three Grafana dashboards include an **Environment** dropdown that filters by
+All Grafana dashboards include an **Environment** dropdown that filters by
 `deployment.environment`. When "All" is selected, data from every environment is shown.
 When no environments have been configured yet, the dropdown is empty and all data is
 shown — existing setups continue to work without changes.
@@ -237,7 +237,7 @@ Your Services
 
 ## Grafana Dashboards
 
-Three dashboards are provisioned automatically:
+Five dashboards are provisioned automatically:
 
 ### Service Health
 
@@ -268,6 +268,42 @@ Lithos LCMA retrieval pipeline performance:
 - **Scouts** — per-scout latency and candidate counts (all 10 scouts)
 - **Enrich Queue** — queue depth, processing lag, attempt distribution
 - **Working Memory** — coactivation pairs, active tasks, state trends over time
+
+### Influx Operations
+
+Operator view of the Influx ingestion service:
+
+- **Run Lifecycle** — active runs, start rate, completion outcomes, run duration
+- **Source Funnel** — candidates fetched, filter decisions, cache hit rate
+- **Lithos Writes** — write status mix, clean-write rate
+- **Failure Modes** — source acquisition errors, LLM validation failures, archive misses
+- **Repair Sweep** — repair candidates and load by profile and stage
+
+### Lens Operations
+
+Operator view of Lithos Lens, organised by **failure mode** rather than by route:
+
+- **At a Glance** — MCP session and event-stream up/down, call rate, failure rate,
+  call p95, call-gate queue wait
+- **Lithos Call Funnel** — call rate and outcomes by tool (`ok` / `timeout` /
+  `tool_error` / `transport_error` / `cancelled`), latency percentiles, time queued
+  at the call gate split by whether the call was ultimately served, reconnect rate
+- **Event Hub** — publish and delivery rates, subscribers against the 128 ceiling,
+  drops by reason
+- **Admission Control & HTTP Surface** — render admissions, in-flight requests,
+  per-route rate and latency, status mix
+- **Knowledge Surface** — note renders by outcome, related-panel duration and
+  fan-out against its cap, searches by mode, wiki-link resolutions by arm
+- **Logs** — trace-linked log stream
+
+Two conventions in this dashboard are worth borrowing. Counters that may never
+fire — drops, reconnects, failures — are queried as `... or vector(0)` on the
+summary stats, because a counter with no increments has **no series**, so a
+healthy service would otherwise read *No data* where it should read `0`; the two
+are indistinguishable to someone glancing at a wall. And every up/down gauge is
+an *observable* gauge on the emitting side: a synchronous gauge written only at
+transitions stops being exported once the transitions stop, and its series
+expires while the service is perfectly healthy.
 
 All dashboards cross-link to each other and share the time range and variable selections.
 
