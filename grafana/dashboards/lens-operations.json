@@ -42,6 +42,28 @@
       "title": "Lithos Operations",
       "type": "link",
       "url": "/d/lithos-operations/lithos-operations"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Influx Operations",
+      "type": "link",
+      "url": "/d/influx-operations/influx-operations"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "LCMA Performance",
+      "type": "link",
+      "url": "/d/lcma-performance/lcma-performance"
     }
   ],
   "templating": {
@@ -1082,7 +1104,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "SSE subscribers attached to the hub, set from the authoritative `len(subscribers)` rather than incremented, so it cannot drift after a missed unsubscribe. The dashed line is MAX_EVENT_SUBSCRIBERS (128); past it lens answers 503.",
+      "description": "SSE subscribers attached to the hub, read from the authoritative `len(subscribers)` at collection time, so it cannot drift after a missed unsubscribe. The dashed line is MAX_EVENT_SUBSCRIBERS (128); past it lens answers 503.\n\n`max` across instances, NOT `sum`: the ceiling is enforced per EventHub, so two healthy replicas holding 70 each would sum to 140 and render red while neither is anywhere near refusing. The worst single instance is the one that starts answering 503.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -1147,8 +1169,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(otel_lens_event_subscribers{deployment_environment=~\"$environment\"})",
-          "legendFormat": "subscribers",
+          "expr": "max(otel_lens_event_subscribers{deployment_environment=~\"$environment\"})",
+          "legendFormat": "busiest instance",
           "refId": "A"
         }
       ],
@@ -1482,7 +1504,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "From the FastAPI instrumentation, so this counts ALL in-flight requests including unmetered ones (`/health`, `/static`, the SSE stream) — an upper bound on metered concurrency, not the semaphore's own count. The dashed line is MAX_CONCURRENT_RENDERS (128) for scale; a long-lived SSE stream sits in this number for the life of the browser tab.",
+      "description": "From the FastAPI instrumentation, which returns before touching this counter for anything in `excluded_urls` — so `/health`, `/static` and the `/tasks/events` SSE stream are ABSENT from it. That makes it a close proxy for metered concurrency rather than raw connection count, and in particular a browser tab holding an SSE stream open for hours does not sit in this number. The dashed line is MAX_CONCURRENT_RENDERS (128).\n\n`max` per instance, not a sum across them: the semaphore is per process, so summing replicas would compare a fleet total against a per-process limit.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -1547,8 +1569,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(otel_http_server_active_requests{service_name=\"lithos-lens\", deployment_environment=~\"$environment\"})",
-          "legendFormat": "in flight",
+          "expr": "max(sum by (service_instance_id) (otel_http_server_active_requests{service_name=\"lithos-lens\", deployment_environment=~\"$environment\"}))",
+          "legendFormat": "busiest instance",
           "refId": "A"
         }
       ],

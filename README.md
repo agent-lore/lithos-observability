@@ -296,14 +296,25 @@ Operator view of Lithos Lens, organised by **failure mode** rather than by route
   fan-out against its cap, searches by mode, wiki-link resolutions by arm
 - **Logs** — trace-linked log stream
 
-Two conventions in this dashboard are worth borrowing. Counters that may never
-fire — drops, reconnects, failures — are queried as `... or vector(0)` on the
-summary stats, because a counter with no increments has **no series**, so a
-healthy service would otherwise read *No data* where it should read `0`; the two
-are indistinguishable to someone glancing at a wall. And every up/down gauge is
-an *observable* gauge on the emitting side: a synchronous gauge written only at
-transitions stops being exported once the transitions stop, and its series
-expires while the service is perfectly healthy.
+Three conventions in this dashboard are worth borrowing when adding a service
+here, because each of them fails **silently** — the panel renders, it just lies.
+
+- Counters that may never fire — drops, reconnects, failures — are queried as
+  `... or vector(0)` on the summary stats. A counter with no increments has
+  **no series**, so a healthy service otherwise reads *No data* where it should
+  read `0`, and "nothing has failed" is indistinguishable from "the
+  instrumentation is broken" to someone glancing at a wall.
+- Every up/down gauge is an *observable* gauge on the emitting side. A
+  synchronous gauge written only at transitions stops being exported once the
+  transitions stop, so its series expires while the service is perfectly
+  healthy — and an absent series reads as "not deployed".
+- Every histogram sets **explicit bucket boundaries**. The OTEL SDK defaults
+  (`0, 5, 10, 25, … 10000`) are shaped for milliseconds; a service recording
+  seconds puts every healthy observation in the single bucket `(0, 5]`, and
+  `histogram_quantile` then interpolates *inside* it — returning p50 2.5s and
+  p95 4.75s no matter what really happened. The tell is unrelated instruments
+  reporting identical percentiles. Put a boundary on each operational threshold
+  so "at the limit" is a bucket edge rather than an interpolation.
 
 All dashboards cross-link to each other and share the time range and variable selections.
 

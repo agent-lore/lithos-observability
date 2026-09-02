@@ -13,3 +13,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Sentry native crash artifacts (runtime, may contain crash metadata)
+.sentry-native/
