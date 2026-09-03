@@ -42,6 +42,17 @@
       "title": "LCMA Performance",
       "type": "link",
       "url": "/d/lcma-performance/lcma-performance"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Lens Operations",
+      "type": "link",
+      "url": "/d/lens-operations/lens-operations"
     }
   ],
   "templating": {

@@ -166,7 +166,7 @@ No code changes are needed — the OTEL SDK reads `OTEL_RESOURCE_ATTRIBUTES` aut
 
 ### Dashboard filtering
 
-All three Grafana dashboards include an **Environment** dropdown that filters by
+All Grafana dashboards include an **Environment** dropdown that filters by
 `deployment.environment`. When "All" is selected, data from every environment is shown.
 When no environments have been configured yet, the dropdown is empty and all data is
 shown — existing setups continue to work without changes.
@@ -237,7 +237,7 @@ Your Services
 
 ## Grafana Dashboards
 
-Three dashboards are provisioned automatically:
+Five dashboards are provisioned automatically:
 
 ### Service Health
 
@@ -268,6 +268,53 @@ Lithos LCMA retrieval pipeline performance:
 - **Scouts** — per-scout latency and candidate counts (all 10 scouts)
 - **Enrich Queue** — queue depth, processing lag, attempt distribution
 - **Working Memory** — coactivation pairs, active tasks, state trends over time
+
+### Influx Operations
+
+Operator view of the Influx ingestion service:
+
+- **Run Lifecycle** — active runs, start rate, completion outcomes, run duration
+- **Source Funnel** — candidates fetched, filter decisions, cache hit rate
+- **Lithos Writes** — write status mix, clean-write rate
+- **Failure Modes** — source acquisition errors, LLM validation failures, archive misses
+- **Repair Sweep** — repair candidates and load by profile and stage
+
+### Lens Operations
+
+Operator view of Lithos Lens, organised by **failure mode** rather than by route:
+
+- **At a Glance** — MCP session and event-stream up/down, call rate, failure rate,
+  call p95, call-gate queue wait
+- **Lithos Call Funnel** — call rate and outcomes by tool (`ok` / `timeout` /
+  `tool_error` / `transport_error` / `cancelled`), latency percentiles, time queued
+  at the call gate split by whether the call was ultimately served, reconnect rate
+- **Event Hub** — publish and delivery rates, subscribers against the 128 ceiling,
+  drops by reason
+- **Admission Control & HTTP Surface** — render admissions, in-flight requests,
+  per-route rate and latency, status mix
+- **Knowledge Surface** — note renders by outcome, related-panel duration and
+  fan-out against its cap, searches by mode, wiki-link resolutions by arm
+- **Logs** — trace-linked log stream
+
+Three conventions in this dashboard are worth borrowing when adding a service
+here, because each of them fails **silently** — the panel renders, it just lies.
+
+- Counters that may never fire — drops, reconnects, failures — are queried as
+  `... or vector(0)` on the summary stats. A counter with no increments has
+  **no series**, so a healthy service otherwise reads *No data* where it should
+  read `0`, and "nothing has failed" is indistinguishable from "the
+  instrumentation is broken" to someone glancing at a wall.
+- Every up/down gauge is an *observable* gauge on the emitting side. A
+  synchronous gauge written only at transitions stops being exported once the
+  transitions stop, so its series expires while the service is perfectly
+  healthy — and an absent series reads as "not deployed".
+- Every histogram sets **explicit bucket boundaries**. The OTEL SDK defaults
+  (`0, 5, 10, 25, … 10000`) are shaped for milliseconds; a service recording
+  seconds puts every healthy observation in the single bucket `(0, 5]`, and
+  `histogram_quantile` then interpolates *inside* it — returning p50 2.5s and
+  p95 4.75s no matter what really happened. The tell is unrelated instruments
+  reporting identical percentiles. Put a boundary on each operational threshold
+  so "at the limit" is a bucket edge rather than an interpolation.
 
 All dashboards cross-link to each other and share the time range and variable selections.
 
